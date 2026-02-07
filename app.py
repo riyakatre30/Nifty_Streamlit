@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -11,7 +11,7 @@ st.set_page_config(
 
 # ---------------- TITLE ----------------
 st.markdown(
-    "<h1 style='text-align:center;'>📊 Interactive Stock Dashboard</h1>",
+    "<h1 style='text-align:center;'>📊 Stock Market Dashboard</h1>",
     unsafe_allow_html=True
 )
 
@@ -32,12 +32,7 @@ stock_name = st.sidebar.selectbox(
     sorted(df["Stock"].unique())
 )
 
-chart_type = st.sidebar.radio(
-    "Chart Type",
-    ["Line Chart", "Candlestick"]
-)
-
-show_volume = st.sidebar.checkbox("Show Volume", True)
+show_volume = st.sidebar.checkbox("Show Volume Chart", True)
 
 ma20 = st.sidebar.checkbox("Moving Average 20", True)
 ma50 = st.sidebar.checkbox("Moving Average 50")
@@ -75,82 +70,25 @@ if ma200:
     stock_df["MA200"] = stock_df["Close"].rolling(200).mean()
 
 # ---------------- PRICE CHART ----------------
-st.subheader("📈 Price Chart")
+st.subheader("📈 Closing Price Trend")
 
-fig = go.Figure()
+fig, ax = plt.subplots(figsize=(12, 5))
 
-if chart_type == "Candlestick":
-    fig.add_trace(go.Candlestick(
-        x=stock_df["Date"],
-        open=stock_df["Open"],
-        high=stock_df["High"],
-        low=stock_df["Low"],
-        close=stock_df["Close"],
-        name="Price"
-    ))
-else:
-    fig.add_trace(go.Scatter(
-        x=stock_df["Date"],
-        y=stock_df["Close"],
-        mode="lines",
-        name="Close Price"
-    ))
+ax.plot(stock_df["Date"], stock_df["Close"], label="Close Price")
 
 if ma20:
-    fig.add_trace(go.Scatter(
-        x=stock_df["Date"],
-        y=stock_df["MA20"],
-        name="MA 20"
-    ))
+    ax.plot(stock_df["Date"], stock_df["MA20"], label="MA 20")
 if ma50:
-    fig.add_trace(go.Scatter(
-        x=stock_df["Date"],
-        y=stock_df["MA50"],
-        name="MA 50"
-    ))
+    ax.plot(stock_df["Date"], stock_df["MA50"], label="MA 50")
 if ma200:
-    fig.add_trace(go.Scatter(
-        x=stock_df["Date"],
-        y=stock_df["MA200"],
-        name="MA 200"
-    ))
+    ax.plot(stock_df["Date"], stock_df["MA200"], label="MA 200")
 
-fig.update_layout(
-    template="plotly_dark",
-    height=500,
-    xaxis_title="Date",
-    yaxis_title="Price",
-    legend=dict(orientation="h", y=1.05)
-)
+ax.set_xlabel("Date")
+ax.set_ylabel("Price")
+ax.legend()
+ax.grid(True)
 
-st.plotly_chart(fig, use_container_width=True)
+st.pyplot(fig)
 
 # ---------------- VOLUME CHART ----------------
-if show_volume and "Volume" in stock_df.columns:
-    st.subheader("📊 Trading Volume")
-
-    vol_fig = go.Figure()
-    vol_fig.add_trace(go.Bar(
-        x=stock_df["Date"],
-        y=stock_df["Volume"],
-        name="Volume"
-    ))
-
-    vol_fig.update_layout(
-        template="plotly_dark",
-        height=250
-    )
-
-    st.plotly_chart(vol_fig, use_container_width=True)
-
-# ---------------- DATA TABLE ----------------
-with st.expander("📄 Show Data Table"):
-    st.dataframe(stock_df)
-
-# ---------------- DOWNLOAD ----------------
-st.download_button(
-    label="⬇️ Download Filtered Data",
-    data=stock_df.to_csv(index=False),
-    file_name=f"{stock_name}_data.csv",
-    mime="text/csv"
-)
+if show
