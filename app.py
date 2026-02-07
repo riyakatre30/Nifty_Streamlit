@@ -91,4 +91,25 @@ ax.grid(True)
 st.pyplot(fig)
 
 # ---------------- VOLUME CHART ----------------
-if show
+if show_volume and "Volume" in stock_df.columns:
+    st.subheader("📊 Trading Volume")
+
+    fig2, ax2 = plt.subplots(figsize=(12, 3))
+    ax2.bar(stock_df["Date"], stock_df["Volume"])
+    ax2.set_xlabel("Date")
+    ax2.set_ylabel("Volume")
+    ax2.grid(True)
+
+    st.pyplot(fig2)
+
+# ---------------- DATA TABLE ----------------
+with st.expander("📄 View Data Table"):
+    st.dataframe(stock_df)
+
+# ---------------- DOWNLOAD ----------------
+st.download_button(
+    label="⬇️ Download Filtered Data",
+    data=stock_df.to_csv(index=False),
+    file_name=f"{stock_name}_data.csv",
+    mime="text/csv"
+)
