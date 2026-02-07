@@ -2,20 +2,20 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-# ---------------- Page Config ----------------
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(
-    page_title="HK Stock Dashboard",
+    page_title="Stock Dashboard",
     page_icon="📈",
     layout="wide"
 )
 
-# ---------------- Title ----------------
+# ---------------- TITLE ----------------
 st.markdown(
-    "<h1 style='text-align: center;'>📊 Hong Kong Stock Market Dashboard</h1>",
+    "<h1 style='text-align:center;'>📊 Interactive Stock Dashboard</h1>",
     unsafe_allow_html=True
 )
 
-# ---------------- Load Data ----------------
+# ---------------- LOAD DATA ----------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("Stock_HK.csv")
@@ -24,10 +24,10 @@ def load_data():
 
 df = load_data()
 
-# ---------------- Sidebar ----------------
+# ---------------- SIDEBAR ----------------
 st.sidebar.header("⚙️ Controls")
 
-stock = st.sidebar.selectbox(
+stock_name = st.sidebar.selectbox(
     "Select Stock",
     sorted(df["Stock"].unique())
 )
@@ -39,15 +39,15 @@ chart_type = st.sidebar.radio(
 
 show_volume = st.sidebar.checkbox("Show Volume", True)
 
-ma20 = st.sidebar.checkbox("MA 20", True)
-ma50 = st.sidebar.checkbox("MA 50")
-ma200 = st.sidebar.checkbox("MA 200")
+ma20 = st.sidebar.checkbox("Moving Average 20", True)
+ma50 = st.sidebar.checkbox("Moving Average 50")
+ma200 = st.sidebar.checkbox("Moving Average 200")
 
-# ---------------- Filter Data ----------------
-stock_df = df[df["Stock"] == stock].sort_values("Date")
+# ---------------- FILTER DATA ----------------
+stock_df = df[df["Stock"] == stock_name].sort_values("Date")
 
 start_date, end_date = st.sidebar.date_input(
-    "Date Range",
+    "Select Date Range",
     [stock_df["Date"].min(), stock_df["Date"].max()]
 )
 
@@ -56,17 +56,17 @@ stock_df = stock_df[
     (stock_df["Date"] <= pd.to_datetime(end_date))
 ]
 
-# ---------------- Metrics ----------------
-st.subheader(f"📌 {stock} Summary")
+# ---------------- METRICS ----------------
+st.subheader(f"📌 {stock_name} Summary")
 
 c1, c2, c3, c4 = st.columns(4)
 
-c1.metric("Open", f"{stock_df.Open.iloc[0]:.2f}")
-c2.metric("Close", f"{stock_df.Close.iloc[-1]:.2f}")
-c3.metric("High", f"{stock_df.High.max():.2f}")
-c4.metric("Low", f"{stock_df.Low.min():.2f}")
+c1.metric("Open", f"{stock_df['Open'].iloc[0]:.2f}")
+c2.metric("Close", f"{stock_df['Close'].iloc[-1]:.2f}")
+c3.metric("High", f"{stock_df['High'].max():.2f}")
+c4.metric("Low", f"{stock_df['Low'].min():.2f}")
 
-# ---------------- Moving Averages ----------------
+# ---------------- MOVING AVERAGES ----------------
 if ma20:
     stock_df["MA20"] = stock_df["Close"].rolling(20).mean()
 if ma50:
@@ -74,7 +74,7 @@ if ma50:
 if ma200:
     stock_df["MA200"] = stock_df["Close"].rolling(200).mean()
 
-# ---------------- Chart ----------------
+# ---------------- PRICE CHART ----------------
 st.subheader("📈 Price Chart")
 
 fig = go.Figure()
@@ -96,7 +96,6 @@ else:
         name="Close Price"
     ))
 
-# Moving averages
 if ma20:
     fig.add_trace(go.Scatter(
         x=stock_df["Date"],
@@ -117,18 +116,18 @@ if ma200:
     ))
 
 fig.update_layout(
+    template="plotly_dark",
     height=500,
     xaxis_title="Date",
     yaxis_title="Price",
-    template="plotly_dark",
     legend=dict(orientation="h", y=1.05)
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
-# ---------------- Volume ----------------
+# ---------------- VOLUME CHART ----------------
 if show_volume and "Volume" in stock_df.columns:
-    st.subheader("📊 Volume")
+    st.subheader("📊 Trading Volume")
 
     vol_fig = go.Figure()
     vol_fig.add_trace(go.Bar(
@@ -138,20 +137,20 @@ if show_volume and "Volume" in stock_df.columns:
     ))
 
     vol_fig.update_layout(
-        height=250,
-        template="plotly_dark"
+        template="plotly_dark",
+        height=250
     )
 
     st.plotly_chart(vol_fig, use_container_width=True)
 
-# ---------------- Data Table ----------------
-with st.expander("📄 View Data Table"):
+# ---------------- DATA TABLE ----------------
+with st.expander("📄 Show Data Table"):
     st.dataframe(stock_df)
 
-# ---------------- Download ----------------
+# ---------------- DOWNLOAD ----------------
 st.download_button(
-    "⬇️ Download Filtered Data",
-    stock_df.to_csv(index=False),
-    file_name=f"{stock}_data.csv",
+    label="⬇️ Download Filtered Data",
+    data=stock_df.to_csv(index=False),
+    file_name=f"{stock_name}_data.csv",
     mime="text/csv"
 )
