@@ -1,19 +1,33 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np
+import plotly.graph_objects as go
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
-    page_title="Stock Dashboard",
-    page_icon="📈",
+    page_title="Hong Kong Stock Market Analysis",
     layout="wide"
 )
 
-# ---------------- TITLE ----------------
+# ---------------- CUSTOM DARK THEME ----------------
 st.markdown(
-    "<h1 style='text-align:center;'>📊 Stock Market Dashboard</h1>",
+    """
+    <style>
+    body {
+        background-color: #000000;
+        color: white;
+    }
+    .stApp {
+        background-color: #000000;
+    }
+    </style>
+    """,
     unsafe_allow_html=True
 )
+
+# ---------------- TITLE ----------------
+st.title("📈 Hong Kong Stock Market Analysis")
+st.write("Interactive stock price visualization with trading-style charts")
 
 # ---------------- LOAD DATA ----------------
 @st.cache_data
@@ -24,92 +38,64 @@ def load_data():
 
 df = load_data()
 
-# ---------------- SIDEBAR ----------------
-st.sidebar.header("⚙️ Controls")
+# ---------------- SIDEBAR CONTROLS ----------------
+st.sidebar.header("🔧 Controls")
 
-stock_name = st.sidebar.selectbox(
-    "Select Stock",
-    sorted(df["Stock"].unique())
+stock_list = df["Stock"].unique()
+selected_stock = st.sidebar.selectbox("Select Stock", stock_list)
+
+date_range = st.sidebar.date_input(
+    "Select Date Range",
+    [df["Date"].min(), df["Date"].max()]
 )
-
-show_volume = st.sidebar.checkbox("Show Volume Chart", True)
-
-ma20 = st.sidebar.checkbox("Moving Average 20", True)
-ma50 = st.sidebar.checkbox("Moving Average 50")
-ma200 = st.sidebar.checkbox("Moving Average 200")
 
 # ---------------- FILTER DATA ----------------
-stock_df = df[df["Stock"] == stock_name].sort_values("Date")
-
-start_date, end_date = st.sidebar.date_input(
-    "Select Date Range",
-    [stock_df["Date"].min(), stock_df["Date"].max()]
-)
-
-stock_df = stock_df[
-    (stock_df["Date"] >= pd.to_datetime(start_date)) &
-    (stock_df["Date"] <= pd.to_datetime(end_date))
+filtered_df = df[
+    (df["Stock"] == selected_stock) &
+    (df["Date"] >= pd.to_datetime(date_range[0])) &
+    (df["Date"] <= pd.to_datetime(date_range[1]))
 ]
 
-# ---------------- METRICS ----------------
-st.subheader(f"📌 {stock_name} Summary")
+# ---------------- LINE CHART (TRADING STYLE) ----------------
+fig = go.Figure()
 
-c1, c2, c3, c4 = st.columns(4)
-
-c1.metric("Open", f"{stock_df['Open'].iloc[0]:.2f}")
-c2.metric("Close", f"{stock_df['Close'].iloc[-1]:.2f}")
-c3.metric("High", f"{stock_df['High'].max():.2f}")
-c4.metric("Low", f"{stock_df['Low'].min():.2f}")
-
-# ---------------- MOVING AVERAGES ----------------
-if ma20:
-    stock_df["MA20"] = stock_df["Close"].rolling(20).mean()
-if ma50:
-    stock_df["MA50"] = stock_df["Close"].rolling(50).mean()
-if ma200:
-    stock_df["MA200"] = stock_df["Close"].rolling(200).mean()
-
-# ---------------- PRICE CHART ----------------
-st.subheader("📈 Closing Price Trend")
-
-fig, ax = plt.subplots(figsize=(12, 5))
-
-ax.plot(stock_df["Date"], stock_df["Close"], label="Close Price")
-
-if ma20:
-    ax.plot(stock_df["Date"], stock_df["MA20"], label="MA 20")
-if ma50:
-    ax.plot(stock_df["Date"], stock_df["MA50"], label="MA 50")
-if ma200:
-    ax.plot(stock_df["Date"], stock_df["MA200"], label="MA 200")
-
-ax.set_xlabel("Date")
-ax.set_ylabel("Price")
-ax.legend()
-ax.grid(True)
-
-st.pyplot(fig)
-
-# ---------------- VOLUME CHART ----------------
-if show_volume and "Volume" in stock_df.columns:
-    st.subheader("📊 Trading Volume")
-
-    fig2, ax2 = plt.subplots(figsize=(12, 3))
-    ax2.bar(stock_df["Date"], stock_df["Volume"])
-    ax2.set_xlabel("Date")
-    ax2.set_ylabel("Volume")
-    ax2.grid(True)
-
-    st.pyplot(fig2)
-
-# ---------------- DATA TABLE ----------------
-with st.expander("📄 View Data Table"):
-    st.dataframe(stock_df)
-
-# ---------------- DOWNLOAD ----------------
-st.download_button(
-    label="⬇️ Download Filtered Data",
-    data=stock_df.to_csv(index=False),
-    file_name=f"{stock_name}_data.csv",
-    mime="text/csv"
+fig.add_trace(
+    go.Scatter(
+        x=filtered_df["Date"],
+        y=filtered_df["Close"],
+        mode="lines",
+        name="Close Price",
+        line=dict(color="#00ffcc", width=2)
+    )
 )
+
+fig.update_layout(
+    title=f"{selected_stock} Closing Price",
+    xaxis_title="Date",
+    yaxis_title="Price",
+    template="plotly_dark",
+    plot_bgcolor="#000000",
+    paper_bgcolor="#000000",
+    font=dict(color="white"),
+    xaxis=dict(
+        rangeslider=dict(visible=True),
+        showgrid=False
+    ),
+    yaxis=dict(showgrid=False),
+    hovermode="x unified"
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# ---------------- BASIC STATS ----------------
+st.subheader("📊 Stock Summary")
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric("Max Price", f"{filtered_df['Close'].max():.2f}")
+col2.metric("Min Price", f"{filtered_df['Close'].min():.2f}")
+col3.metric("Average Price", f"{filtered_df['Close'].mean():.2f}")
+
+# ---------------- DATA PREVIEW ----------------
+with st.expander("📄 View Raw Data"):
+    st.dataframe(filtered_df)
